@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.wilma-digest</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/dmikhaylov/.local/bin/uv</string>
+        <string>run</string>
+        <string>wilma-digest</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/dmikhaylov/Desktop/wilma-message-digest</string>
+
+    <!-- Run every evening at 19:00 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>19</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/dmikhaylov/Desktop/wilma-message-digest/wilma-digest.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/dmikhaylov/Desktop/wilma-message-digest/wilma-digest-error.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/Users/dmikhaylov/.local/bin</string>
+    </dict>
+</dict>
+</plist>
