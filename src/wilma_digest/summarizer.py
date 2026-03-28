@@ -1,9 +1,27 @@
 import anthropic
 
+DEFAULT_PROMPT_TEMPLATE = """\
+You are helping a parent by summarizing school messages from a school portal.
+The messages below may be in a foreign language. Summarize each one in {language}.
 
-def summarize_messages(messages: list[dict], api_key: str) -> str:
+Rules:
+- Output {language} only — do not quote or reproduce the original language text
+- Group messages by student (child's name as a header)
+- For each message: bold the subject, name the sender, and give a 2-4 sentence summary
+- Highlight any action items or important dates
+
+Messages:
+{messages_text}"""
+
+
+def summarize_messages(
+    messages: list[dict],
+    api_key: str,
+    language: str = "English",
+    prompt_template: str | None = None,
+) -> str:
     """
-    Translate and summarize a list of Wilma messages into an English digest.
+    Translate and summarize a list of Wilma messages into a digest.
 
     Each message dict: {student, subject, sender, sent_label, body}
     Returns a formatted string ready to send via Telegram.
@@ -25,17 +43,8 @@ Body:
 {msg['body']}
 """
 
-    prompt = f"""You are helping a parent by summarizing school messages from Wilma, a Finnish school portal.
-The messages below are in Finnish. Summarize each one in Russian.
-
-Rules:
-- Output Russian only — do not quote or reproduce any Finnish text
-- Group messages by student (child's name as a header)
-- For each message: bold the subject, name the sender, and give a 2-4 sentence summary
-- Highlight any action items or important dates
-
-Messages:
-{messages_text}"""
+    template = prompt_template if prompt_template is not None else DEFAULT_PROMPT_TEMPLATE
+    prompt = template.format(language=language, messages_text=messages_text)
 
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",

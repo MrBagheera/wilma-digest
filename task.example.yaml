@@ -1,0 +1,27 @@
+# Wilma digest task configuration example.
+# Copy to task.yaml (or any name) and fill in your values.
+
+# Required: base URL of your Wilma instance
+wilma_url: https://espoo.inschool.fi
+
+# Optional: prefix for credential env vars.
+# If set to "ESPOO", credentials are read from ESPOO_WILMA_EMAIL / ESPOO_WILMA_PASSWORD.
+# If omitted, WILMA_EMAIL / WILMA_PASSWORD are used.
+# credentials_prefix: ESPOO
+
+# Optional: only process messages for these children (exact name match).
+# If omitted, all students on the account are processed.
+# children:
+#   - Alice Smith
+#   - Bob Smith
+
+# Optional: language for the digest (default: English).
+# language: Russian
+
+# Optional: fully custom summarization prompt.
+# Use {language} and {messages_text} as placeholders.
+# If omitted, the built-in prompt is used.
+# prompt: |
+#   Summarize these school messages in {language} for a busy parent.
+#   Be brief. Messages:
+#   {messages_text}

@@ -3,9 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 
-BASE_URL = "https://espoo.inschool.fi"
-
-
 @dataclass
 class Message:
     id: str
@@ -18,9 +15,10 @@ class Message:
 
 
 class WilmaClient:
-    def __init__(self, email: str, password: str):
+    def __init__(self, email: str, password: str, base_url: str):
         self.email = email
         self.password = password
+        self.base_url = base_url.rstrip("/")
         self.session = requests.Session()
         self.session.headers["User-Agent"] = (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -29,7 +27,7 @@ class WilmaClient:
 
     def login(self) -> None:
         # Fetch fresh SESSIONID (JWT) from the login page
-        r = self.session.get(f"{BASE_URL}/login")
+        r = self.session.get(f"{self.base_url}/login")
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "lxml")
         form = soup.find("form")
@@ -44,24 +42,40 @@ class WilmaClient:
         data["Login"] = self.email
         data["Password"] = self.password
 
-        r = self.session.post(f"{BASE_URL}/login", data=data, allow_redirects=True)
+        r = self.session.post(f"{self.base_url}/login", data=data, allow_redirects=True)
         r.raise_for_status()
 
         if r.url.rstrip("/").endswith("/login"):
-            raise RuntimeError("Login failed — check WILMA_EMAIL / WILMA_PASSWORD")
+            raise RuntimeError("Login failed — check credentials")
 
     def get_students(self) -> list[dict]:
-        r = self.session.get(f"{BASE_URL}/")
+        r = self.session.get(f"{self.base_url}/")
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "lxml")
 
         students = []
         seen: set[str] = set()
-        # Student links appear in the user-menu dropdown as /!{id} (no trailing path)
-        for a in soup.find_all("a", href=re.compile(r"^/!\d+/?$")):
+
+        # Prefer panel-body H1 links — they include the institution name, which
+        # disambiguates students who share a display name across multiple enrollments.
+        # The .lem span inside contains the class code and teacher; strip it so we
+        # get "{person name} {institution}" as the student name.
+        candidate_links = [
+            a for a in soup.select(".panel-body h1 a[href]")
+            if re.match(r"^/!\d+/?$", a.get("href", ""))
+        ]
+        # Fall back to dropdown links if no panel-body H1s are found
+        if not candidate_links:
+            candidate_links = soup.find_all("a", href=re.compile(r"^/!\d+/?$"))
+
+        for a in candidate_links:
             sid = re.search(r"/!(\d+)", a["href"]).group(1)
-            name = a.get_text(strip=True)
-            if sid not in seen and name:
+            if sid in seen:
+                continue
+            for lem in a.find_all(class_="lem"):
+                lem.decompose()
+            name = " ".join(a.get_text(" ", strip=True).split())
+            if name:
                 seen.add(sid)
                 students.append({"id": sid, "name": name})
         return students
@@ -86,7 +100,7 @@ class WilmaClient:
 
     def get_unread_messages(self, student_id: str) -> list[Message]:
         """Return all unread messages (Status==1) via the JSON list API."""
-        r = self.session.get(f"{BASE_URL}/!{student_id}/messages/list")
+        r = self.session.get(f"{self.base_url}/!{student_id}/messages/list")
         r.raise_for_status()
         data = r.json()
 
@@ -95,13 +109,13 @@ class WilmaClient:
 
     def get_last_messages(self, student_id: str, n: int) -> list[Message]:
         """Return the N most recent messages regardless of read status."""
-        r = self.session.get(f"{BASE_URL}/!{student_id}/messages/list")
+        r = self.session.get(f"{self.base_url}/!{student_id}/messages/list")
         r.raise_for_status()
         data = r.json()
         return self._parse_message_list(data.get("Messages", [])[:n])
 
     def get_message_body(self, student_id: str, message_id: str) -> str:
-        r = self.session.get(f"{BASE_URL}/!{student_id}/messages/{message_id}")
+        r = self.session.get(f"{self.base_url}/!{student_id}/messages/{message_id}")
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "lxml")
 
