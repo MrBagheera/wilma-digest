@@ -62,6 +62,9 @@ wilma_url: https://espoo.inschool.fi
 # Optional: digest language (default: English)
 language: Russian
 
+# Optional: max messages per digest batch (default: 5; overrides --max-messages for this task)
+# max_messages: 10
+
 # Optional: custom summarisation prompt; use {language} and {messages_text} as placeholders
 # prompt: |
 #   Summarise these school messages in {language}. Be concise.
@@ -80,6 +83,9 @@ uv run wilma-digest task.yaml --resend-last 3
 
 # Print digest to stdout instead of sending via Telegram
 uv run wilma-digest task.yaml --skip-telegram
+
+# Limit digest size (default: 5 messages per digest; larger batches are split into multiple digests)
+uv run wilma-digest task.yaml --max-messages 10
 ```
 
 ## Scheduled run (macOS)

@@ -22,12 +22,13 @@ def load_task(path: str) -> dict:
     return task
 
 
-def run_task(task: dict, resend_last: int | None, skip_telegram: bool) -> None:
+def run_task(task: dict, resend_last: int | None, skip_telegram: bool, default_max_messages: int) -> None:
     wilma_url = task["wilma_url"]
     prefix = task.get("credentials_prefix", "").strip()
     children_filter: list[str] | None = task.get("children")
     language: str = task.get("language", "English")
     prompt_template: str | None = task.get("prompt")
+    max_messages: int = task.get("max_messages", default_max_messages)
 
     # Resolve credentials from env using optional prefix
     def env(name: str) -> str | None:
@@ -91,33 +92,41 @@ def run_task(task: dict, resend_last: int | None, skip_telegram: bool) -> None:
 
     all_messages.sort(key=lambda m: m.sent_ts)
 
-    print(f"[{wilma_url}] Summarising {len(all_messages)} message(s) with Claude...")
-    digest = summarize_messages(
-        [
-            {
-                "student": m.student_name,
-                "subject": m.subject,
-                "sender": m.sender,
-                "sent_label": m.sent_label,
-                "body": m.body,
-            }
-            for m in all_messages
-        ],
-        api_key=api_key,
-        language=language,
-        prompt_template=prompt_template,
-    )
+    chunks = [all_messages[i:i + max_messages] for i in range(0, len(all_messages), max_messages)]
+    today = date.today().strftime("%-d.%-m.%Y")
+    bot_token = None if skip_telegram else os.environ["TELEGRAM_BOT_TOKEN"]
+    chat_id = None if skip_telegram else os.environ["TELEGRAM_CHAT_ID"]
 
-    header = f"*Wilma Digest — {date.today().strftime('%-d.%-m.%Y')}*\n\n"
-    full_text = header + digest
+    for idx, chunk in enumerate(chunks, 1):
+        part_label = f" ({idx}/{len(chunks)})" if len(chunks) > 1 else ""
+        print(f"[{wilma_url}] Summarising {len(chunk)} message(s) with Claude{part_label}...")
+        digest = summarize_messages(
+            [
+                {
+                    "student": m.student_name,
+                    "subject": m.subject,
+                    "sender": m.sender,
+                    "sent_label": m.sent_label,
+                    "body": m.body,
+                }
+                for m in chunk
+            ],
+            api_key=api_key,
+            language=language,
+            prompt_template=prompt_template,
+        )
 
-    if skip_telegram:
-        print(full_text)
-    else:
-        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
-        chat_id = os.environ["TELEGRAM_CHAT_ID"]
-        send_message(bot_token, chat_id, full_text)
-        print(f"[{wilma_url}] Sent digest for {len(all_messages)} message(s).")
+        header = f"*Wilma Digest — {today}{part_label}*\n\n"
+        full_text = header + digest
+
+        if skip_telegram:
+            print(full_text)
+        else:
+            send_message(bot_token, chat_id, full_text)
+
+    total = len(all_messages)
+    if not skip_telegram:
+        print(f"[{wilma_url}] Sent {len(chunks)} digest(s) for {total} message(s).")
 
 
 def main() -> None:
@@ -134,6 +143,10 @@ def main() -> None:
         "--skip-telegram", action="store_true",
         help="Print digest to stdout instead of sending via Telegram",
     )
+    parser.add_argument(
+        "--max-messages", metavar="N", type=int, default=5,
+        help="Max messages per digest (default: 5); can also be set per task with max_messages",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -142,7 +155,7 @@ def main() -> None:
     for path in args.task_files:
         try:
             task = load_task(path)
-            run_task(task, args.resend_last, args.skip_telegram)
+            run_task(task, args.resend_last, args.skip_telegram, args.max_messages)
         except Exception as e:
             print(f"ERROR [{path}]: {e}", file=sys.stderr)
             errors.append(path)
