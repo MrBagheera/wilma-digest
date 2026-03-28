@@ -6,7 +6,7 @@ The messages below may be in a foreign language. Summarize each one in {language
 
 Rules:
 - Output {language} only — do not quote or reproduce the original language text
-- Group messages by student (child's name as a header)
+- Group messages by student; use the full student name (including institution) as the section header
 - For each message: bold the subject, name the sender, include the sent date, and give a 2-4 sentence summary
 - Highlight any action items or important dates
 
