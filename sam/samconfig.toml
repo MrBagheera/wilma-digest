@@ -1,0 +1,11 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "wilma-digest"
+region = "eu-north-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "WilmaEmail=\"${WILMA_EMAIL}\" WilmaPassword=\"${WILMA_PASSWORD}\" AnthropicApiKey=\"${ANTHROPIC_API_KEY}\" TelegramBotToken=\"${TELEGRAM_BOT_TOKEN}\" TelegramChatId=\"${TELEGRAM_CHAT_ID}\" WilmaDigestCmd=\"${WILMA_DIGEST_CMD}\""
+resolve_s3 = true
+
+[default.build.parameters]
+use_container = false

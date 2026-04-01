@@ -8,5 +8,8 @@ dist/
 *.egg-info/
 *.yaml
 !/task.example.yaml
+*.plist
+!/com.wilma-digest.example.plist
 /.idea/
-/.aws-sam/
+/sam/.aws-sam/
+/requirements.txt

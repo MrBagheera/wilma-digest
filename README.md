@@ -105,68 +105,134 @@ Deploy to AWS Lambda using AWS SAM (Serverless Application Model) for automatic,
 - AWS CLI configured with credentials
 - AWS SAM CLI: `brew install aws-sam-cli`
 
+**SAM files location:** All SAM-related files are in the `sam/` directory:
+- `template.yaml` — CloudFormation/SAM template
+- `samconfig.toml` — deployment configuration
+- `lambda_handler.py` — Lambda entry point
+- `Makefile` — build/deploy automation
+
 **Deployment:**
 
-1. Load environment variables:
+1. Load environment variables (including the command to run):
    ```bash
    export $(cat .env | xargs)
+   export WILMA_DIGEST_CMD="wilma-digest task1.yaml task2.yaml"
    ```
 
-2. Build the Lambda package:
+2. Build and deploy using Make:
    ```bash
-   sam build
+   cd sam
+   make deploy   # Builds and deploys to AWS
    ```
 
-3. Deploy to AWS (first time):
-   ```bash
-   sam deploy --guided
-   ```
-   
-   Accept the defaults when prompted:
+3. First-time deployment prompts:
    - Stack name: `wilma-digest`
    - Region: `eu-north-1` (Stockholm - closest to Finland)
    - Confirm IAM role creation: Yes
    - Allow Lambda without authorization: Yes
    - Save arguments to config: Yes
 
-4. Subsequent updates:
-   ```bash
-   sam build && sam deploy
-   ```
-
 **Testing:**
 ```bash
-# Test locally before deploying
-sam local invoke WilmaDigestFunction
+cd sam
 
-# View logs in AWS
-sam logs -n WilmaDigestFunction --stack-name wilma-digest --tail
+# Set up environment
+export $(cat ../.env | xargs)
+export WILMA_DIGEST_CMD="wilma-digest task1.yaml task2.yaml"
+
+# Test locally before deploying (requires make build first)
+make build
+sam local invoke WilmaDigestFunction
 ```
 
 **Teardown:**
 ```bash
+cd sam
+
 # Remove all AWS resources
 sam delete --stack-name wilma-digest
+
+# Clean local build artifacts
+make clean
 ```
 
 **Configuration:**
-- Schedule: Runs every hour 7:00-22:00 on weekdays (Mon-Fri)
-- Task files: Edit `lambda_handler.py` to change which task files are processed
-- Schedule: Edit `template.yaml` to modify the cron expression
+- `WILMA_DIGEST_CMD`: The command to run, e.g. `"wilma-digest task1.yaml task2.yaml --max-messages 10"`
+- Schedule: Runs every hour 7:00-22:00 on weekdays (Mon-Fri); edit `sam/template.yaml` to modify
+- Task files: Place in project root; they will be packaged with the Lambda
 
 ### Option 2: macOS launchd (Local)
 
-A launchd plist is included to run the digest locally on macOS daily at 19:00.
+Run the digest locally on macOS using launchd for scheduled execution.
 
-1. Edit `com.wilma-digest.plist` — update the task file paths in `ProgramArguments` to match your setup.
-2. Install:
+**Benefits:**
+- No cloud account needed
+- Runs on your Mac automatically
+- Simple setup
 
+**Requirements:**
+- macOS
+- Project cloned locally with `uv sync` completed
+
+**Setup:**
+
+1. Copy the example plist and customize it:
+   ```bash
+   cp com.wilma-digest.example.plist com.wilma-digest.plist
+   ```
+
+2. Edit `com.wilma-digest.plist` and update:
+   - `ProgramArguments`: Add your task files after `wilma-digest`
+   - `WorkingDirectory`: Path to your project directory
+   - `StandardOutPath` / `StandardErrorPath`: Log file paths
+   - Path to `uv` binary (find with `which uv`)
+
+   Example `ProgramArguments` section:
+   ```xml
+   <key>ProgramArguments</key>
+   <array>
+       <string>/Users/yourname/.local/bin/uv</string>
+       <string>run</string>
+       <string>wilma-digest</string>
+       <string>task1.yaml</string>
+       <string>task2.yaml</string>
+   </array>
+   ```
+
+3. Install the launch agent:
+   ```bash
+   cp com.wilma-digest.plist ~/Library/LaunchAgents/
+   launchctl load ~/Library/LaunchAgents/com.wilma-digest.plist
+   ```
+
+**Schedule:**
+- Default: Daily at 19:00
+- Edit the `StartCalendarInterval` section in the plist to change
+
+**Managing the service:**
 ```bash
-cp com.wilma-digest.plist ~/Library/LaunchAgents/
+# Check if running
+launchctl list | grep wilma-digest
+
+# Stop the service
+launchctl unload ~/Library/LaunchAgents/com.wilma-digest.plist
+
+# Start after making changes
 launchctl load ~/Library/LaunchAgents/com.wilma-digest.plist
+
+# Run manually (for testing)
+launchctl start com.wilma-digest
 ```
 
-Logs are written to `wilma-digest.log` and `wilma-digest-error.log` in the project directory.
+**Logs:**
+- `wilma-digest.log` — standard output
+- `wilma-digest-error.log` — errors
+
+**Uninstall:**
+```bash
+launchctl unload ~/Library/LaunchAgents/com.wilma-digest.plist
+rm ~/Library/LaunchAgents/com.wilma-digest.plist
+```
 
 ## Setting up a Telegram bot
 
