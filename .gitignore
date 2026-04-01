@@ -9,3 +9,4 @@ dist/
 *.yaml
 !/task.example.yaml
 /.idea/
+/.aws-sam/

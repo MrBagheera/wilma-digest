@@ -29,7 +29,7 @@ class WilmaClient:
         # Fetch fresh SESSIONID (JWT) from the login page
         r = self.session.get(f"{self.base_url}/login")
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
+        soup = BeautifulSoup(r.text, "html.parser")
         form = soup.find("form")
         if not form:
             raise RuntimeError("Could not find login form")
@@ -51,7 +51,7 @@ class WilmaClient:
     def get_students(self) -> list[dict]:
         r = self.session.get(f"{self.base_url}/")
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
+        soup = BeautifulSoup(r.text, "html.parser")
 
         students = []
         seen: set[str] = set()
@@ -117,7 +117,7 @@ class WilmaClient:
     def get_message_body(self, student_id: str, message_id: str) -> str:
         r = self.session.get(f"{self.base_url}/!{student_id}/messages/{message_id}")
         r.raise_for_status()
-        soup = BeautifulSoup(r.text, "lxml")
+        soup = BeautifulSoup(r.text, "html.parser")
 
         main = soup.find("main")
         if not main:

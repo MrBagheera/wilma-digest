@@ -88,9 +88,75 @@ uv run wilma-digest task.yaml --skip-telegram
 uv run wilma-digest task.yaml --max-messages 10
 ```
 
-## Scheduled run (macOS)
+## Deployment Options
 
-A launchd plist is included to run the digest daily at 19:00.
+### Option 1: AWS Lambda (Recommended)
+
+Deploy to AWS Lambda using AWS SAM (Serverless Application Model) for automatic, scheduled execution in the cloud.
+
+**Benefits:**
+- No local machine needed
+- Automatic scheduling (hourly 7-22 on weekdays)
+- Infrastructure as code (version controlled)
+- ~$0.00/month (AWS free tier)
+
+**Requirements:**
+- AWS account
+- AWS CLI configured with credentials
+- AWS SAM CLI: `brew install aws-sam-cli`
+
+**Deployment:**
+
+1. Load environment variables:
+   ```bash
+   export $(cat .env | xargs)
+   ```
+
+2. Build the Lambda package:
+   ```bash
+   sam build
+   ```
+
+3. Deploy to AWS (first time):
+   ```bash
+   sam deploy --guided
+   ```
+   
+   Accept the defaults when prompted:
+   - Stack name: `wilma-digest`
+   - Region: `eu-north-1` (Stockholm - closest to Finland)
+   - Confirm IAM role creation: Yes
+   - Allow Lambda without authorization: Yes
+   - Save arguments to config: Yes
+
+4. Subsequent updates:
+   ```bash
+   sam build && sam deploy
+   ```
+
+**Testing:**
+```bash
+# Test locally before deploying
+sam local invoke WilmaDigestFunction
+
+# View logs in AWS
+sam logs -n WilmaDigestFunction --stack-name wilma-digest --tail
+```
+
+**Teardown:**
+```bash
+# Remove all AWS resources
+sam delete --stack-name wilma-digest
+```
+
+**Configuration:**
+- Schedule: Runs every hour 7:00-22:00 on weekdays (Mon-Fri)
+- Task files: Edit `lambda_handler.py` to change which task files are processed
+- Schedule: Edit `template.yaml` to modify the cron expression
+
+### Option 2: macOS launchd (Local)
+
+A launchd plist is included to run the digest locally on macOS daily at 19:00.
 
 1. Edit `com.wilma-digest.plist` — update the task file paths in `ProgramArguments` to match your setup.
 2. Install:
