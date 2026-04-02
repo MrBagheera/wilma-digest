@@ -145,6 +145,19 @@ make build
 sam local invoke WilmaDigestFunction
 ```
 
+**Viewing logs:**
+```bash
+# Live tail (follow new logs as they arrive)
+sam logs -n WilmaDigestFunction --stack-name wilma-digest --tail
+
+# View recent logs (last 10 minutes)
+sam logs -n WilmaDigestFunction --stack-name wilma-digest
+
+# View logs for a specific time range
+sam logs -n WilmaDigestFunction --stack-name wilma-digest \
+  --start-time "2024-01-15T10:00:00" --end-time "2024-01-15T12:00:00"
+```
+
 **Teardown:**
 ```bash
 cd sam
